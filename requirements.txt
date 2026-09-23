@@ -1,0 +1,13 @@
+langchain
+langchain-community
+langchain-postgres
+langchain-ollama
+langchain-text-splitters
+psycopg[binary]
+pgvector
+streamlit
+python-dotenv
+pypdfduckduckgo-search
+requests
+langchain-groq
+langdetect
