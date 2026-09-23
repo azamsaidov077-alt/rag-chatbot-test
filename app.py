@@ -73,6 +73,10 @@ def ingest_uploaded_files(files):
         os.unlink(tmp_path)
 
     if all_chunks:
+        try:
+            vectorstore.create_collection()
+        except Exception:
+            pass
         vectorstore.add_documents(all_chunks)
     return len(all_chunks)
 
