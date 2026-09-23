@@ -10,7 +10,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_groq import ChatGroq
 from langchain_postgres import PGVector
 from langgraph.prebuilt import create_react_agent
@@ -23,14 +23,14 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "nomic-embed-text")
 CHAT_MODEL = os.environ.get("CHAT_MODEL", "llama-3.3-70b-versatile")
 GROQ_API_KEY = os.environ["GROQ_API_KEY"]
-COLLECTION_NAME = os.environ.get("COLLECTION_NAME", "demo_docs")
+COLLECTION_NAME = os.environ.get("COLLECTION_NAME", "demo_docs_v2")
 
 st.set_page_config(page_title="AI Chatbot", page_icon="🤖", layout="centered")
 
 
 @st.cache_resource(show_spinner=False)
 def get_embeddings():
-    return OllamaEmbeddings(model=EMBED_MODEL, base_url=OLLAMA_BASE_URL)
+    return FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 
 @st.cache_resource(show_spinner=False)
@@ -51,7 +51,7 @@ def get_llm():
 embeddings = get_embeddings()
 vectorstore = get_vectorstore(embeddings)
 llm = get_llm()
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
 
 
 def ingest_uploaded_files(files):
@@ -257,7 +257,16 @@ if user_input := st.chat_input("Savolingizni yozing..."):
     except LangDetectException:
         lang_code = "unknown"
     lang_names = {"uz": "Uzbek", "ru": "Russian", "en": "English"}
-    lang_name = lang_names.get(lang_code, lang_code)
+    # langdetect o'zbek lotin matnini ko'pincha xato aniqlaydi (masalan
+    # alban, indonez va h.k. deb belgilaydi) — shuning uchun faqat aniq
+    # tanigan uch tilimizga ishonamiz, qolganida standart o'zbekchaga
+    # qaytamiz (kirill bo'lsa ruscha deb hisoblaymiz)
+    if lang_code in lang_names:
+        lang_name = lang_names[lang_code]
+    elif any('\u0400' <= ch <= '\u04FF' for ch in user_input):
+        lang_name = "Russian"
+    else:
+        lang_name = "Uzbek"
     tagged_input = f"{user_input}\n\n[System note: reply in {lang_name} language, matching the language of this message]"
     doc_keywords = ["pdf", "hujjat", "fayl", "file", "document",
                     "faylda", "hujjatda", "yukla"]
