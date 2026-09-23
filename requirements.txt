@@ -11,3 +11,4 @@ pypdf==5.*
 langchain-groq
 duckduckgo-search
 langdetect
+langgraph
